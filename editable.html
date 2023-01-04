@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>text editor via canvas</title>
+</head>
+<body style="background-color: lightgrey;">
+    
+    <h1>text editor via canvas</h1>
+    <!-- <pre id=writeOut></pre> <script>function write(text){writeOut.textContent += text + "\n"}</script> -->
+    
+    wrap lines limit:<input type="range" id="number" value="8" max="20" oninput="reDraw() // needs re-draw">
+    
+    <canvas id="canvas1" width="10" height="10" style="border: 1px solid black; width: calc(100% - 2px); "></canvas> <br>
+
+    <!--
+    <button onclick="$text=prompt(); draw($text, $font);">set text</button>
+
+    <button onclick="cursorMove(-1)"><<<<<<</button> <button onclick="cursorMove(+1)">>>>>>></button> <br>
+
+    <button onclick="textDelete()">textDelete()</button>
+    <button onclick="textInsert(prompt())">textInsert()</button> <br>
+
+    <style>button { height: 4em; } </style>
+
+    key code alphabet input with case, symbols and backspace, space, enter keys
+
+    <pre id=textOut style="border: 1px solid red" ></pre> <br>
+    -->
+
+    <script>
+
+    document.addEventListener('keypress', function(event) {
+
+        // conversion
+        var text = String.fromCharCode(event.keyCode)
+
+        if(event.key == "Enter"){
+            // new-line
+            text = "\n"
+        }
+
+        if(event.key == " "){
+            // space
+            text = " "
+
+            // space key scrolls page down by default behavior
+            event.preventDefault()
+        }
+
+        insert(text)
+
+    })
+
+    document.addEventListener('keydown', function(event) {
+        if(event.key=='Backspace') backspace()
+
+        if(event.key=='ArrowRight') cursorMove(+1)
+        if(event.key=='ArrowLeft') cursorMove(-1)
+
+        if( event.key == "ArrowRight" || event.key == "ArrowLeft" ||
+        event.key == "ArrowDown" || event.key == "ArrowUp"         
+        ){
+            // arrow keys scrolls page by default behavior
+            event.preventDefault()
+        }
+
+        if(event.key=='ArrowDown') cursorMoveLine(+1)
+        if(event.key=='ArrowUp') cursorMoveLine(-1)
+    })
+
+    function insert(text){
+        if(window.upperCase) text = text.toUpperCase()
+
+        // add at the end (no cursor)
+        ///textOut.textContent += text
+
+        textInsert(text)
+    }
+
+    // backspace key deletes backwards
+    function backspace(){
+        // remove from the end (no cursor)
+        ///textOut.textContent = textOut.textContent.slice(0,-1)
+
+        textDelete()
+    }
+
+    </script>
+
+    <p>touch-screen keyboard input<br>
+    <style>#keyButtons button{ width:60px;height:50px;  font-size:17pt; }</style>
+    <span id=keyButtons></span>
+    </p>
+
+    <script>
+    var keyStringEmbedded = "abcdefghijklmnopqrstuvwxyz0123456789+-*/^%,.?!:;_\"`'()[]{}<>=&\\|/@#$~" // '\' and '"' escaped
+    var keyListURL = 'https://arkenidar.com/web/key-list.txt'
+    fetch(keyListURL).then(res=>res.text()).then(keyString=>setup(keyString)).catch(error=>setup(keyStringEmbedded))
+
+    function setup(keyString)
+    {
+    window.newLine="\n"
+    keyButtons.innerHTML += `<button onclick="insert(newLine)">line</button>`
+    keyButtons.innerHTML += '<button onclick="backspace()">del</button>'
+    window.upperCase=false; window.caseToggle = function(){ window.upperCase = ! window.upperCase }
+    keyButtons.innerHTML += '<button onclick="caseToggle()">case</button>'
+    keyButtons.innerHTML += `<button onclick="insert(' ')">&nbsp;</button>`
+
+    keyButtons.innerHTML += '<button onclick="cursorMove(-1)">⇦</button>'
+    keyButtons.innerHTML += '<button onclick="cursorMove(+1)">⇨</button>'
+
+    ///var keyList="abcdefghijklmnopqrstuvwxyz0123456789+-*/^%,.?!:;_\"`'()[]{}<>=&\|/@#$~".split("")
+    var keyList = keyString.split("")
+    for(var keyChar of keyList)
+        keyButtons.innerHTML += "<button onclick='insert(event.target.textContent)'>"+keyChar+"</button>"
+    }
+    </script>
+
+    <!--*************************************-->
+
+    <script>
+    var canvas = document.getElementById('canvas1')
+    var context = canvas.getContext('2d')
+    function measureTextWidth(text){ // needs "context"
+        var measure = Math.ceil( context.measureText(text).width )
+        return measure
+    }
+
+    var $font = {}
+    $font.string = '30px monospace'
+    $font.height = 30
+
+    $cursorPosition = 0
+    screenCountRows = 0 // previous value // was : rowsCount
+    screenCountRowsPrevious = screenCountRows
+
+    var $text = "" // "multi-line text\nline2\nline3.............."
+    draw()
+
+    var needsRedraw = true
+    var previousClientWidth = canvas.clientWidth
+    var previousClientHeight = canvas.clientHeight
+    setInterval(redrawChecks,500)
+    function redrawChecks(){
+        ///draw() // always, disable this for conditional re-draw
+
+        if(previousClientWidth != canvas.clientWidth){ // screen size changes
+            previousClientWidth = canvas.clientWidth
+            reDraw()
+        }
+        if(previousClientHeight != canvas.clientHeight){ // screen size changes
+            previousClientHeight = canvas.clientHeight
+            reDraw()
+        }
+
+        if(needsRedraw){
+            draw() // conditional redraw
+            needsRedraw = false
+        }
+    }
+
+    function reDraw(){
+        needsRedraw = true
+    }
+
+    function draw(){
+        
+        console.log("draw()")
+
+        var text = $text, font = $font
+
+        if( $text[$text.length-1] != "\n" ) $text += "\n"
+
+        var x = 0, y = 0
+        
+        // deltas
+        context.font = font.string
+        dx = measureTextWidth(" ")
+        dy = font.height
+
+        // lines
+        var lines = text.split("\n")
+        if(lines[lines.length-1]=="") lines.length -= 1
+
+        // maxLength
+        maxLength = 0 ; for(var line of lines) maxLength = Math.max(maxLength, line.length)
+        maxLength += 1 // extra length
+
+        var wordWrapMaxIndex = parseInt ( number.value ) // 8
+        var wordWrapEnabled = wordWrapMaxIndex != 0
+
+        var columnsCountMaxForScreen = Math.floor( canvas.clientWidth / dx ) // canvas.clientWidth is derived from screen-orientation also
+        
+        var columnsCount = /*Math.max(maxLength,*/ columnsCountMaxForScreen // needs redraw when canvas.clientWidth changes
+
+        if(wordWrapEnabled && wordWrapMaxIndex===undefined) wordWrapMaxIndex = columnsCount-1
+
+        // ranges in lines (string, not screen. see word-wrapping)
+        stringIdRanges = [] // string-lines
+        var charIndex1 = 0
+        ///var lineIndex = -1
+        for(var line of lines){
+            ///lineIndex += 1
+            var charIndex2 = charIndex1 + line.length
+            stringIdRanges.push([charIndex1, charIndex2, line.length+1])
+            charIndex1 = charIndex2 + 1
+        }
+
+        // size the canvas
+        canvas.width = dx * columnsCount
+        canvas.height = dy * (screenCountRows + 0.5)
+
+        // setup again after canvas size changes
+        context = canvas.getContext('2d')
+        context.font = font.string
+
+        var xi = 0 , yi = 0
+        indicesToPositionMapping = {}
+        var stringLineId = 0 // real line, in string
+        var screenLineId = 0 // screen lines, as displayed
+        
+        screenIdRanges = [] // for screen-lines, besides string-lines above
+        var screenRangeIndexBegin = 0 , screenRangeIndexEnd
+
+        stringLineLenghts = []
+        var stringLineLength = 0
+        screenLineLenghts = []
+        var screenLineLenght = 0
+
+        for( var characterId=0; characterId < text.length; characterId++ )
+        {
+            var character = text[characterId]
+            
+            var wordWrap
+            indicesToPositionMapping[xi+","+yi] = characterId
+
+            {
+                context.fillText(character, x, y +dy ) // draw character
+                if( characterId == $cursorPosition ){ // at cursor position
+                    context.strokeRect(x, y, dx, dy) // draw cursor
+                    cursorX = xi ; cursorY = yi
+                    
+                    stringLineIdOfCursor = stringLineId
+                    screenLineIdOfCursor = screenLineId
+
+                    cursorMoveLine = function cursorMoveLine(deltaY){
+                        var calculatedCursorPosition = indicesToPositionMapping[cursorX+","+(cursorY+deltaY)]
+                        
+                        if(calculatedCursorPosition !== undefined){
+                            $cursorPosition = calculatedCursorPosition
+                        }
+                        else
+                        
+                        {
+                            var deltaIdRange = screenIdRanges[ screenLineIdOfCursor + deltaY]
+                            if(deltaIdRange !== undefined){
+                                $cursorPosition = deltaIdRange[1]
+                            }
+                        }
+                        // needs redraw for changed $cursorPosition
+                        reDraw() // needs re-draw
+                    }
+                }
+                x += dx // next in line
+
+                wordWrap = wordWrapEnabled && wordWrapMaxIndex == xi
+                xi += 1
+            }
+            if(character=="\n" || wordWrap ) // new line or word-wrap
+            { x = 0 ; y += dy ; xi = 0 ; yi += 1 }
+
+            //**************************************
+
+            if(character=="\n") stringLineId += 1 // "real line" (in string)
+            if(character=="\n" || wordWrap ) screenLineId += 1 // screen-displayed line
+
+            //**************************************
+            stringLineLength += 1
+            if(character=="\n"){ // new line only
+                stringLineLenghts.push(stringLineLength)
+                stringLineLength = 0
+            }
+
+            screenLineLenght += 1
+            if(character=="\n" || wordWrap ){ // new line or word-wrap
+
+                screenRangeIndexEnd = screenRangeIndexBegin + screenLineLenght-1
+                screenIdRanges.push([ screenRangeIndexBegin , screenRangeIndexEnd , screenLineLenght ])
+                screenRangeIndexBegin = screenRangeIndexEnd + 1
+
+                //======================
+                
+                screenLineLenghts.push(screenLineLenght)
+                screenLineLenght = 0
+
+            }
+            
+        }
+
+        screenCountRows = screenIdRanges.length
+        
+        if(screenCountRowsPrevious != screenCountRows){
+            screenCountRowsPrevious = screenCountRows
+            draw() // draw() to cycle, not just reDraw()
+        }
+
+    }
+
+    function cursorMove(delta){ // -1 or +1
+        setCursorPosition($cursorPosition + delta)
+    }
+
+    function bounds(){
+        $cursorPosition = Math.max(0, Math.min( $text.length-1 , $cursorPosition ) ) // bounds
+    }
+
+    function setCursorPosition(cursorPosition){
+        $cursorPosition = cursorPosition
+        bounds()
+        reDraw() // needs re-draw
+    }
+
+    function textDelete(){
+        bounds()
+        $text = $text.substr(0, $cursorPosition - 1) + $text.substr($cursorPosition, $text.length)
+        $cursorPosition -= 1
+        bounds()
+        reDraw() // needs re-draw
+    }
+
+    function textInsert(textToInsert){
+        bounds()
+        $text = $text.substring(0, $cursorPosition) + textToInsert + $text.substring($cursorPosition)
+        $cursorPosition += textToInsert.length
+        bounds()
+        reDraw() // needs re-draw
+    }
+
+    canvas1.onclick = function(event){
+        var idRanges = screenIdRanges
+
+        var point = {x: event.offsetX, y: event.offsetY}
+        lineNumber = Math.floor(point.y / dy)
+        columnNumber = Math.floor(point.x / dx)
+        bounds()
+
+        lineNumber = Math.min(lineNumber, idRanges.length-1)
+        columnNumber = Math.min(columnNumber, idRanges[lineNumber][1] - idRanges[lineNumber][0])
+        $cursorPosition = idRanges[lineNumber][0] + columnNumber
+
+        bounds()
+        reDraw() // needs re-draw
+    }
+
+    var initialText="multi-line text\nline2\nline3.............."
+    $text = initialText
+    draw()
+
+    ///textOut.textContent = $text
+
+    </script>
+
+    <script src="https://arkenidar.com/web/show-source.js"></script>
+
+</body>
+</html>
