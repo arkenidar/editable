@@ -7,10 +7,10 @@
 </head>
 <body style="background-color: lightgrey;">
     
-    <h1>text editor via canvas</h1>
+    <h1>text editing via &lt;canvas> tag's 2D Graphic Output + Mouse/Touch Input</h1>
     <!-- <pre id=writeOut></pre> <script>function write(text){writeOut.textContent += text + "\n"}</script> -->
     
-    wrap lines limit:<input type="range" id="number" value="8" max="20" oninput="reDraw() // needs re-draw">
+    <!-- wrap lines limit:<input type="range" id="number" value="0" max="20" oninput="reDraw() // needs re-draw"> -->
     
     <canvas id="canvas1" width="10" height="10" style="border: 1px solid black; width: calc(100% - 2px); "></canvas> <br>
 
@@ -89,15 +89,17 @@
 
     </script>
 
-    <p>touch-screen keyboard input<br>
+    <p><i>Touch-Screen KeyBoard</i> <b>input</b> is possible, also it's possible <i>Physical KeyBoard</i> e.g. using my Laptop PC (a <i>Tablet's external Physical KeyBoard</i> is also possible?)<br>
     <style>#keyButtons button{ width:60px;height:50px;  font-size:17pt; }</style>
     <span id=keyButtons></span>
     </p>
 
     <script>
     var keyStringEmbedded = "abcdefghijklmnopqrstuvwxyz0123456789+-*/^%,.?!:;_\"`'()[]{}<>=&\\|/@#$~" // '\' and '"' escaped
-    var keyListURL = 'https://arkenidar.com/web/key-list.txt'
-    fetch(keyListURL).then(res=>res.text()).then(keyString=>setup(keyString)).catch(error=>setup(keyStringEmbedded))
+    var keyListURL = "key-list.txt" // 'https://arkenidar.com/web/key-list.txt'
+    var online = false
+    if(online) fetch(keyListURL).then(res=>res.text()).then(keyString=>setup(keyString)).catch(error=>setup(keyStringEmbedded))
+    else setup(keyStringEmbedded)
 
     function setup(keyString)
     {
@@ -167,7 +169,7 @@
 
     function draw(){
         
-        console.log("draw()")
+        //console.log("draw()")
 
         var text = $text, font = $font
 
@@ -188,7 +190,9 @@
         maxLength = 0 ; for(var line of lines) maxLength = Math.max(maxLength, line.length)
         maxLength += 1 // extra length
 
-        var wordWrapMaxIndex = parseInt ( number.value ) // 8
+        var wordWrapMaxIndex
+        if(typeof number != "undefined") wordWrapMaxIndex = parseInt ( number.value ) // 8
+        if(typeof wordWrapMaxIndex != "number") wordWrapMaxIndex = 0
         var wordWrapEnabled = wordWrapMaxIndex != 0
 
         var columnsCountMaxForScreen = Math.floor( canvas.clientWidth / dx ) // canvas.clientWidth is derived from screen-orientation also
@@ -362,7 +366,8 @@
 
     </script>
 
-    <script src="https://arkenidar.com/web/show-source.js"></script>
+    <!-- https://arkenidar.com/web/show-source.js -->
+    <!-- <script src="show-source.js"></script> -->
 
 </body>
 </html>
