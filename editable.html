@@ -10,7 +10,7 @@
     <h1>text editing via &lt;canvas> tag's 2D Graphic Output + Mouse/Touch Input</h1>
     <!-- <pre id=writeOut></pre> <script>function write(text){writeOut.textContent += text + "\n"}</script> -->
     
-    <!-- wrap lines limit:<input type="range" id="number" value="0" max="20" oninput="reDraw() // needs re-draw"> -->
+    wrap lines limit:<input type="range" id="number" value="0" max="20" oninput="reDraw() /* needs re-draw */">
     text-size: <input type="range" value="30" min="0" max="70" oninput="$font.height=parseInt(this.value)"> <br>
     <!-- text-size changes by <input type="range"> with proxify() use that works for more refined data-relations and data-updates handling (reusable-pattern) -->
     <canvas id="canvas1" width="10" height="10" style="border: 1px solid black; width: calc(100% - 2px); "></canvas> <br>
