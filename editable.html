@@ -11,7 +11,8 @@
     <!-- <pre id=writeOut></pre> <script>function write(text){writeOut.textContent += text + "\n"}</script> -->
     
     <!-- wrap lines limit:<input type="range" id="number" value="0" max="20" oninput="reDraw() // needs re-draw"> -->
-    
+    text-size: <input type="range" value="30" min="0" max="70" oninput="$font.height=parseInt(this.value)"> <br>
+    <!-- text-size changes by <input type="range"> with proxify() use that works for more refined data-relations and data-updates handling (reusable-pattern) -->
     <canvas id="canvas1" width="10" height="10" style="border: 1px solid black; width: calc(100% - 2px); "></canvas> <br>
 
     <!--
@@ -123,6 +124,38 @@
     <!--*************************************-->
 
     <script>
+    <!-- text-size changes by <input type="range"> with proxify() use that works for more refined data-relations and data-updates handling (reusable-pattern) -->
+    function proxify(objectToProxy) {
+        var proxy
+        var handler = {
+
+            // handle access
+            get(target, accessedPropertyName, receiver) {
+                return typeof target[accessedPropertyName] === 'function' ?
+                    // OPTIONALly callable
+                    target[accessedPropertyName] ( proxy /* same */ )
+                    : target[accessedPropertyName]
+            },
+
+            // handle assignment like = or +=
+            set(target, accessedPropertyName, value) {
+                var postfix="_Set"
+                if(typeof target[accessedPropertyName+postfix] != "undefined"){
+                    // OPTIONAL SETter
+                    target[accessedPropertyName+postfix](proxy /* same */ ) (value)
+                    return true
+                }
+                target[accessedPropertyName] = value
+                return true
+            },
+        }
+        // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Proxy
+        proxy = new Proxy(objectToProxy, handler)
+        return proxy
+    }
+    </script>
+
+    <script>
     var canvas = document.getElementById('canvas1')
     var context = canvas.getContext('2d')
     function measureTextWidth(text){ // needs "context"
@@ -130,11 +163,21 @@
         return measure
     }
 
+    <!-- text-size changes by <input type="range"> with proxify() use that works for more refined data-relations and data-updates handling (reusable-pattern) -->
+    /*
+    // was:
     var $font = {}
     $font.string = '30px monospace'
     $font.height = 30
+    */
+    var $font = proxify({})
+    $font.height = _=> _.height_Value
+    $font.height_Value = 30 // on-set : reDraw()
+    $font.height_Set = _=> number => { _.height_Value = number ; reDraw() }
+    $font.string = _=> _.height + 'px monospace' // '30px monospace'
 
     $cursorPosition = 0
+
     screenCountRows = 0 // previous value // was : rowsCount
     screenCountRowsPrevious = screenCountRows
 
