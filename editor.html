@@ -1,0 +1,50 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>editor</title>
+</head>
+<body>
+
+<pre id="page"></pre>
+<pre id="editor" contenteditable="true" style="border: 1px solid black;padding: 0px;"></pre>
+
+<button onclick="sync()">sync</button>
+<input type="checkbox" id="autoSync">
+
+<script>
+
+// from var (variable in localStorage)
+editor.innerText = localStorage.html // editor <- var
+setHTML(localStorage.html) // page <- var
+
+// from editor
+function sync(){
+    localStorage.html = editor.innerText // var <- editor
+    setHTML(editor.innerText) // page <- editor
+}
+
+function setHTML(html){
+    //page.innerHTML = html // this doesn't properly handle e.g. <script> tags
+    nodeContentFromCode(html, page) // this does handle <script> tags etc.
+}
+
+setInterval( function(){
+    if( autoSync.checked ) sync()
+}, 1500)
+
+function nodeContentFromCode(code, node) {
+    var range = document.createRange()
+    range.selectNode(document.body)
+    var documentFragment = range.createContextualFragment(code)
+    node.innerHTML = ""
+    node.appendChild(documentFragment)
+}
+</script>
+
+<script src="show-source.js"></script>
+
+</body>
+</html>
