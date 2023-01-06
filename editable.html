@@ -6,6 +6,10 @@
     <title>text editor via canvas</title>
 </head>
 <body style="background-color: lightgrey;">
+
+<pre id="page"></pre>
+<button onclick="sync()">sync page pre-view</button>
+<input type="checkbox" id="autoSync"> autoSync
     
     <h1>text editing via &lt;canvas> tag's 2D Graphic Output + Mouse/Touch Input</h1>
     <!-- <pre id=writeOut></pre> <script>function write(text){writeOut.textContent += text + "\n"}</script> -->
@@ -407,6 +411,34 @@
 
     ///textOut.textContent = $text
 
+//===============================================
+
+    // from var (variable in localStorage)
+    $text = localStorage.html ; reDraw() // editor <- var
+    setHTML(localStorage.html) // page <- var
+    
+    // from editor
+    function sync(){
+        localStorage.html = $text // var <- editor
+        setHTML($text) // page <- editor
+    }
+    
+    function setHTML(html){
+        //page.innerHTML = html // this doesn't properly handle e.g. <script> tags
+        nodeContentFromCode(html, page) // this does handle <script> tags etc.
+    }
+    
+    setInterval( function(){
+        if( autoSync.checked ) sync()
+    }, 1500)
+    
+    function nodeContentFromCode(code, node) {
+        var range = document.createRange()
+        range.selectNode(document.body)
+        var documentFragment = range.createContextualFragment(code)
+        node.innerHTML = ""
+        node.appendChild(documentFragment)
+    }
     </script>
 
     <!-- https://arkenidar.com/web/show-source.js -->
